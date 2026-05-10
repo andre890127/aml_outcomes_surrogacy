@@ -4,7 +4,7 @@
     "version": "1.1",
     "total_rows": 40,
     "outcomes_available": {
-      "os": "39/40",
+      "os": "40/40",
       "efs": "28/40",
       "cr": "40/40",
       "mrd": "17/40"
@@ -1350,7 +1350,7 @@
       }
     },
     {
-      "trial_number": 40,
+      "trial_number": 35,
       "pmid": "41490515",
       "trial_name": null,
       "author1": "Dohner, H",
