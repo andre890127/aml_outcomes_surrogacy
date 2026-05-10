@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MRD as Surrogate in AML — Living Meta-Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#21262d;--border:#30363d;
+  --accent:#00d4aa;--accent2:#0099cc;--warn:#f79000;--danger:#e74c3c;
+  --text:#e6edf3;--muted:#8b949e;
+  --font:'IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6;}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:100;height:54px;}
+.logo-mark{width:34px;height:34px;background:var(--accent);border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10px;font-weight:500;color:#000;flex-shrink:0;letter-spacing:-0.02em;}
+.hdr-title{font-size:14px;font-weight:500;color:var(--text);}
+.hdr-sub{font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:1px;}
+.hdr-badge{background:rgba(0,212,170,0.1);color:var(--accent);border:1px solid rgba(0,212,170,0.3);font-size:10px;font-family:var(--mono);padding:3px 8px;border-radius:4px;letter-spacing:.05em;}
+.nav-tabs{margin-left:auto;display:flex;gap:2px;list-style:none;}
+.nav-tabs a{display:block;padding:5px 12px;font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;border-radius:5px;cursor:pointer;transition:all .15s;border:1px solid transparent;}
+.nav-tabs a:hover{color:var(--text);background:var(--surface2);}
+.nav-tabs a.active{color:var(--accent);background:rgba(0,212,170,0.08);border-color:rgba(0,212,170,0.2);}
+
+/* PAGES */
+.page{display:none;}.page.active{display:block;}
+#page-graphs.active{display:flex;}
+
+/* SECTION LABEL */
+.section-label{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* PAGE 1 */
+#page-pico{padding:32px 0 60px;}
+.pico-wrap{max-width:840px;margin:0 auto;padding:0 24px;}
+.pico-statement{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:10px;padding:24px 26px;margin-bottom:24px;}
+.pico-statement h1{font-size:17px;font-weight:500;color:var(--text);line-height:1.5;margin-bottom:12px;}
+.pico-statement h1 em{color:var(--accent);font-style:normal;}
+.pico-statement p{font-size:13px;color:var(--muted);line-height:1.75;}
+.pico-table{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:24px;}
+.pico-table-hdr{background:var(--surface2);border-bottom:1px solid var(--border);padding:9px 18px;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+.pico-row{display:grid;grid-template-columns:110px 1fr;border-bottom:1px solid var(--border);}
+.pico-row:last-child{border-bottom:none;}
+.pico-key{padding:16px 18px;border-right:1px solid var(--border);background:var(--surface2);}
+.pico-letter{font-family:var(--mono);font-size:20px;font-weight:500;color:var(--accent);line-height:1;margin-bottom:3px;}
+.pico-word{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.pico-val{padding:16px 18px;font-size:13px;line-height:1.7;color:var(--text);}
+.pico-val strong{color:var(--accent);font-weight:500;}
+.methods-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:24px;}
+.stats-bracket{display:flex;gap:0;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.bracket-item{flex:1;padding:18px 20px;text-align:center;border-right:1px solid var(--border);position:relative;}
+.bracket-item:last-child{border-right:none;}
+.bracket-value{font-family:var(--mono);font-size:32px;font-weight:500;color:var(--accent);line-height:1;margin-bottom:4px;}
+.bracket-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+.bracket-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px;opacity:.6;}
+.method-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;}
+.method-card-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent2);margin-bottom:6px;}
+.method-card p{font-size:12px;color:var(--muted);line-height:1.65;}
+
+/* PAGE 2 */
+#page-trials{padding:28px 0 60px;}
+.trials-wrap{padding:0 24px;}
+.filter-bar{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
+.filter-lbl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-right:4px;}
+.filter-btn{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;}
+.filter-btn:hover{color:var(--text);border-color:var(--muted);}
+.filter-btn.active{background:rgba(0,212,170,0.08);border-color:rgba(0,212,170,0.25);color:var(--accent);}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.table-meta-row{padding:9px 14px;border-bottom:1px solid var(--border);background:var(--surface2);font-family:var(--mono);font-size:10px;color:var(--muted);}
+.table-scroll{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:1100px;}
+thead tr{background:var(--surface2);}
+th{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:400;padding:8px 11px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:7px 11px;border-bottom:1px solid rgba(48,54,61,.5);color:var(--text);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,.02);}
+.td-mono{font-family:var(--mono);}
+.td-muted{color:var(--muted);font-family:var(--mono);font-size:11px;}
+.td-accent{color:var(--accent2);font-family:var(--mono);}
+.badge{display:inline-block;font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;white-space:nowrap;}
+.badge-int{background:rgba(0,153,204,.12);color:var(--accent2);border:1px solid rgba(0,153,204,.2);}
+.badge-noint{background:rgba(0,212,170,.1);color:var(--accent);border:1px solid rgba(0,212,170,.2);}
+.badge-mixed{background:rgba(247,144,0,.1);color:var(--warn);border:1px solid rgba(247,144,0,.2);}
+.mrd-badge{font-family:var(--mono);font-size:9px;padding:1px 5px;border-radius:3px;margin-left:3px;}
+.mb-mfc{background:rgba(0,153,204,.12);color:var(--accent2);}
+.mb-ngs{background:rgba(0,212,170,.1);color:var(--accent);}
+.mb-pcr{background:rgba(247,144,0,.1);color:var(--warn);}
+.mb-mix{background:rgba(231,76,60,.1);color:var(--danger);}
+.hr-val{font-family:var(--mono);font-weight:500;}
+.hr-ci{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.pmid-link{font-family:var(--mono);font-size:10px;color:var(--accent2);text-decoration:none;}
+.pmid-link:hover{text-decoration:underline;}
+
+/* PAGE 3 */
+#page-graphs{height:calc(100vh - 54px);flex-direction:row;}
+.graph-sidebar{width:246px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;}
+.graph-sidebar::-webkit-scrollbar{width:4px;}
+.graph-sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.sb-sec{padding:13px;border-bottom:1px solid var(--border);}
+.sb-lbl{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:9px;}
+.outcome-tab{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:6px;cursor:pointer;transition:all .15s;margin-bottom:2px;border:1px solid transparent;}
+.outcome-tab:hover{background:var(--surface2);}
+.outcome-tab.active{background:rgba(0,212,170,.07);border-color:rgba(0,212,170,.18);}
+.ot-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.ot-label{font-family:var(--mono);font-size:11px;color:var(--muted);flex:1;}
+.outcome-tab.active .ot-label{color:var(--accent);}
+.ot-count{font-family:var(--mono);font-size:10px;color:var(--muted);background:var(--surface2);padding:1px 5px;border-radius:3px;}
+.preset-btn{display:block;width:100%;text-align:left;font-family:var(--mono);font-size:11px;padding:5px 8px;border-radius:4px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;margin-bottom:2px;}
+.preset-btn:hover{background:var(--surface2);color:var(--text);}
+.preset-btn.applied{background:rgba(0,212,170,.07);border-color:rgba(0,212,170,.18);color:var(--accent);}
+.sel-all-row{display:flex;gap:5px;margin-bottom:8px;}
+.sel-btn{font-family:var(--mono);font-size:9px;padding:2px 7px;border:1px solid var(--border);background:transparent;color:var(--muted);border-radius:3px;cursor:pointer;transition:all .15s;}
+.sel-btn:hover{color:var(--text);border-color:var(--muted);}
+.trial-check-item{display:flex;align-items:flex-start;gap:6px;padding:3px 3px;border-radius:4px;cursor:pointer;transition:background .1s;}
+.trial-check-item:hover{background:var(--surface2);}
+.trial-check-item input[type=checkbox]{width:11px;height:11px;accent-color:var(--accent);cursor:pointer;margin-top:2px;flex-shrink:0;}
+.trial-check-label{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.4;cursor:pointer;}
+.trial-check-item.no-data .trial-check-label{color:#3d4451;font-style:italic;}
+.trial-check-item.no-data input{opacity:.3;}
+.graph-main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+.graph-topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 18px;flex-shrink:0;}
+.graph-title-txt{font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px;}
+.graph-sub-txt{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.graph-canvas-row{flex:1;display:flex;min-height:0;padding:14px;gap:12px;}
+.svg-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative;min-width:0;}
+#scatter-svg{width:100%;height:100%;display:block;}
+.stats-col{width:182px;flex-shrink:0;display:flex;flex-direction:column;gap:9px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:13px 14px;text-align:center;}
+.stat-card-lbl{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;}
+.stat-card-val{font-family:var(--mono);font-size:24px;font-weight:500;color:var(--text);line-height:1;margin-bottom:3px;}
+.stat-card-sub{font-family:var(--mono);font-size:9px;color:var(--muted);line-height:1.4;}
+.stat-card.sig .stat-card-val{color:var(--accent);}
+.stat-card.ns .stat-card-val{color:var(--muted);}
+.stat-note{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 13px;font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.6;}
+.graph-footnote{padding:7px 18px;background:var(--surface);border-top:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--muted);flex-shrink:0;}
+.tooltip{position:fixed;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:7px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .12s;z-index:1000;max-width:210px;line-height:1.5;box-shadow:0 4px 20px rgba(0,0,0,.5);}
+.tooltip.visible{opacity:1;}
+.tt-author{font-weight:500;margin-bottom:3px;}
+.tt-row{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.tt-row span{color:var(--text);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-mark">AML</div>
+  <div>
+    <div class="hdr-title">MRD as Surrogate Endpoint in AML &nbsp;·&nbsp; Living Meta-Analysis</div>
+    <div class="hdr-sub">Trial-level surrogacy · Weighted least-squares regression · v1.0</div>
+  </div>
+  <span class="hdr-badge">RESEARCH</span>
+  <button onclick="downloadHTML()" style="margin-left:8px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--mono);font-size:11px;padding:4px 11px;border-radius:4px;cursor:pointer;transition:all .15s;" onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--muted)'" onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">⬇ download</button>
+  <ul class="nav-tabs">
+    <li><a onclick="showPage('pico')"   id="nav-pico"   class="active">① Background</a></li>
+    <li><a onclick="showPage('trials')" id="nav-trials">② Trials</a></li>
+    <li><a onclick="showPage('graphs');setOutcome('mrd')" id="nav-mrd">③a MRD vs OS</a></li>
+    <li><a onclick="showPage('graphs');setOutcome('cr')"  id="nav-cr">③b CR vs OS</a></li>
+    <li><a onclick="showPage('graphs');setOutcome('efs')" id="nav-efs">③c EFS vs OS</a></li>
+  </ul>
+</header>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- PAGE 1 -->
+<div id="page-pico" class="page active">
+  <div class="pico-wrap">
+    <br>
+    <div class="section-label">Clinical Question</div>
+    <div class="pico-statement">
+      <h1>Is <em>MRD negativity</em> a valid surrogate for overall survival in randomized trials of acute myeloid leukaemia?</h1>
+      <p>Measurable residual disease (MRD) has emerged as a powerful prognostic marker in AML, yet its value as a surrogate endpoint in randomized controlled trials remains unestablished. A trial-level surrogacy analysis quantifies the correlation between treatment effects on MRD — and on CR and EFS — with the treatment effect on overall survival, using the weighted regression framework of Buyse and Burzykowski.</p>
+    </div>
+
+    <div class="stats-bracket">
+      <div class="bracket-item">
+        <div class="bracket-value" id="bv-trials">40</div>
+        <div class="bracket-label">Randomized trials</div>
+        <div class="bracket-sub" id="bs-trials">40 trial arms</div>
+      </div>
+      <div class="bracket-item">
+        <div class="bracket-value" id="bv-pts">15,482</div>
+        <div class="bracket-label">Patients evaluated</div>
+        <div class="bracket-sub">across all arms</div>
+      </div>
+      <div class="bracket-item">
+        <div class="bracket-value" id="bv-mrd">17</div>
+        <div class="bracket-label">Trials with MRD data</div>
+        <div class="bracket-sub">mfc · ngs · pcr</div>
+      </div>
+      <div class="bracket-item">
+        <div class="bracket-value" id="bv-years">2015–2026</div>
+        <div class="bracket-label">Publication range</div>
+        <div class="bracket-sub">living database</div>
+      </div>
+    </div>
+
+    <div class="section-label">PICO Framework</div>
+    <div class="pico-table">
+      <div class="pico-table-hdr">Structured research question</div>
+      <div class="pico-row">
+        <div class="pico-key"><div class="pico-letter">P</div><div class="pico-word">Population</div></div>
+        <div class="pico-val">Adults (≥18 years) with <strong>newly diagnosed AML</strong> enrolled in randomized controlled trials, regardless of cytogenetic or molecular risk. Both intensive and non-intensive treatment settings included.</div>
+      </div>
+      <div class="pico-row">
+        <div class="pico-key"><div class="pico-letter">I</div><div class="pico-word">Intervention</div></div>
+        <div class="pico-val">Any <strong>experimental intervention</strong>: FLT3 inhibitors, IDH1/2 inhibitors, venetoclax combinations, anti-CD33 / GO, immunotherapy, hypomethylating agents, or chemotherapy intensification strategies.</div>
+      </div>
+      <div class="pico-row">
+        <div class="pico-key"><div class="pico-letter">C</div><div class="pico-word">Comparator</div></div>
+        <div class="pico-val"><strong>Standard of care</strong> arm: placebo plus chemotherapy, best supportive care, or physician's choice, as defined by each trial.</div>
+      </div>
+      <div class="pico-row">
+        <div class="pico-key"><div class="pico-letter">O</div><div class="pico-word">Outcomes</div></div>
+        <div class="pico-val"><strong>Primary:</strong> Trial-level association between treatment effect on MRD negativity (log OR) and OS (log HR) by weighted least-squares regression.<br><br><strong>Secondary:</strong> Analogous associations for CR vs OS and EFS vs OS. β coefficient, R², p-value, and 95% CI reported per surrogate.</div>
+      </div>
+    </div>
+
+    <div class="section-label">Analytical Framework</div>
+    <div class="methods-grid">
+      <div class="method-card"><div class="method-card-lbl">Study Design</div><p>Systematic review of Phase II–III RCTs in newly diagnosed AML. Each trial arm contributes one point to the regression. Database updated continuously as new results are published.</p></div>
+      <div class="method-card"><div class="method-card-lbl">Statistical Method</div><p>Weighted least-squares (WLS) regression at the trial level. Each point weighted by 1/SE²(OS HR), giving larger and more precise trials greater influence on the regression line.</p></div>
+      <div class="method-card"><div class="method-card-lbl">Surrogates Evaluated</div><p>MRD negativity rate (log OR from counts + 0.5 continuity correction), CR/CRi rate (log OR from counts), and EFS (log HR from reported HR and 95% CI). Separate regression models.</p></div>
+      <div class="method-card"><div class="method-card-lbl">Living Review</div><p>Data in a version-controlled JSON file on GitHub. One row per trial arm. New trials are added as published; graphs and statistics update on the next page load automatically.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 2 -->
+<div id="page-trials" class="page">
+  <div class="trials-wrap" style="padding-top:28px;padding-bottom:60px;">
+    <div class="section-label">Included Trials</div>
+    <div class="filter-bar">
+      <span class="filter-lbl">Filter:</span>
+      <button class="filter-btn active" onclick="filterTable('all',this)">All</button>
+      <button class="filter-btn" onclick="filterTable('intensive',this)">Intensive</button>
+      <button class="filter-btn" onclick="filterTable('non-intensive',this)">Non-intensive</button>
+      <button class="filter-btn" onclick="filterTable('flt3-i',this)">FLT3i</button>
+      <button class="filter-btn" onclick="filterTable('venetoclax',this)">Venetoclax</button>
+      <button class="filter-btn" onclick="filterTable('anti-cd33',this)">GO / anti-CD33</button>
+      <button class="filter-btn" onclick="filterTable('idh_i',this)">IDHi</button>
+      <button class="filter-btn" onclick="filterTable('mrd',this)">Has MRD data</button>
+    </div>
+    <div class="table-wrap">
+      <div class="table-meta-row" id="table-meta">— trials</div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Author</th><th>Trial</th><th>Year</th><th>Class</th><th>Drug class</th>
+            <th>Intervention</th><th>Control</th><th>N (i)</th><th>N (c)</th>
+            <th>OS HR (95% CI)</th><th>EFS HR (95% CI)</th><th>CR i / c</th><th>MRD i / c</th><th>PMID</th>
+          </tr></thead>
+          <tbody id="trials-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE 3 -->
+<div id="page-graphs" class="page">
+  <div class="graph-sidebar">
+    <div class="sb-sec">
+      <div class="sb-lbl">Outcome</div>
+      <div class="outcome-tab active" onclick="setOutcome('mrd')" id="tab-mrd">
+        <div class="ot-dot" style="background:#00d4aa"></div>
+        <div class="ot-label">MRD vs OS</div>
+        <div class="ot-count" id="count-mrd">—</div>
+      </div>
+      <div class="outcome-tab" onclick="setOutcome('cr')" id="tab-cr">
+        <div class="ot-dot" style="background:#0099cc"></div>
+        <div class="ot-label">CR vs OS</div>
+        <div class="ot-count" id="count-cr">—</div>
+      </div>
+      <div class="outcome-tab" onclick="setOutcome('efs')" id="tab-efs">
+        <div class="ot-dot" style="background:#f79000"></div>
+        <div class="ot-label">EFS vs OS</div>
+        <div class="ot-count" id="count-efs">—</div>
+      </div>
+    </div>
+    <div class="sb-sec">
+      <div class="sb-lbl">Quick select</div>
+      <button class="preset-btn" onclick="applyPreset('all',this)">All trials</button>
+      <button class="preset-btn" onclick="applyPreset('intensive',this)">Intensive only</button>
+      <button class="preset-btn" onclick="applyPreset('non-intensive',this)">Non-intensive only</button>
+      <button class="preset-btn" onclick="applyPreset('flt3-i',this)">FLT3 inhibitors</button>
+      <button class="preset-btn" onclick="applyPreset('anti-cd33',this)">GO / anti-CD33</button>
+      <button class="preset-btn" onclick="applyPreset('venetoclax',this)">Venetoclax</button>
+      <button class="preset-btn" onclick="applyPreset('idh_i',this)">IDH inhibitors</button>
+    </div>
+    <div class="sb-sec" style="flex:1;overflow-y:auto;">
+      <div class="sb-lbl">Trials</div>
+      <div class="sel-all-row">
+        <button class="sel-btn" onclick="selAll(true)">All</button>
+        <button class="sel-btn" onclick="selAll(false)">None</button>
+      </div>
+      <div id="trial-checklist"></div>
+    </div>
+  </div>
+
+  <div class="graph-main">
+    <div class="graph-topbar">
+      <div class="graph-title-txt" id="graph-title">MRD negativity rate vs Overall Survival</div>
+      <div class="graph-sub-txt" id="graph-sub">log(OR) MRD negativity — x axis · log(HR) OS — y axis · bubble size = 1/SE²(OS)</div>
+    </div>
+    <div class="graph-canvas-row">
+      <div class="svg-card"><svg id="scatter-svg"></svg></div>
+      <div class="stats-col">
+        <div class="stat-card" id="card-beta">
+          <div class="stat-card-lbl">β coefficient</div>
+          <div class="stat-card-val" id="val-beta">—</div>
+          <div class="stat-card-sub" id="sub-beta">95% CI: —</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-lbl">R²</div>
+          <div class="stat-card-val" id="val-r2">—</div>
+          <div class="stat-card-sub">Variance explained</div>
+        </div>
+        <div class="stat-card" id="card-p">
+          <div class="stat-card-lbl">p value</div>
+          <div class="stat-card-val" id="val-p">—</div>
+          <div class="stat-card-sub" id="sub-p">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-lbl">Trials in model</div>
+          <div class="stat-card-val" id="val-n">—</div>
+          <div class="stat-card-sub">of <span id="val-ntot">—</span> with data</div>
+        </div>
+        <div class="stat-note">WLS regression. Weight = 1/SE²(log HR OS). Bubble area ∝ weight. Line + 95% CI band when ≥3 trials.</div>
+      </div>
+    </div>
+    <div class="graph-footnote">Each point = one trial arm · Hover for details · Toggle trials in sidebar to update regression live</div>
+  </div>
+</div>
+
+<script>
+// ── FETCH trials.json at runtime ──────────────────────────────────
+// Place trials.json in the same folder as index.html on GitHub.
+// Update trials.json anytime; the site picks up changes on next load.
+
+let TRIALS = [];
+
+const CFG={
+  mrd:{title:'MRD negativity rate vs Overall Survival',sub:'log(OR) MRD negativity — x axis · log(HR) OS — y axis · bubble size = 1/SE²(OS)',xl:'log(OR) MRD negativity',yl:'log(HR) OS',col:'#00d4aa',nav:'nav-mrd'},
+  cr: {title:'Complete Remission rate vs Overall Survival',sub:'log(OR) CR — x axis · log(HR) OS — y axis · bubble size = 1/SE²(OS)',xl:'log(OR) CR',yl:'log(HR) OS',col:'#0099cc',nav:'nav-cr'},
+  efs:{title:'Event-Free Survival vs Overall Survival',sub:'log(HR) EFS — x axis · log(HR) OS — y axis · bubble size = 1/SE²(OS)',xl:'log(HR) EFS',yl:'log(HR) OS',col:'#f79000',nav:'nav-efs'}
+};
+
+let curPage='pico', curOutcome='mrd';
+let checked=new Set();
+
+// ── LOADING STATE ─────────────────────────────────────────────────
+function showLoader(){
+  ['trials-tbody','trial-checklist'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.innerHTML='<tr><td colspan="15" style="text-align:center;padding:32px;font-family:var(--mono);font-size:11px;color:var(--muted)">Loading trials.json…</td></tr>';
+  });
+}
+
+function showError(msg){
+  document.body.innerHTML+=`<div style="position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#2d1b1b;border:1px solid #5c2020;color:#e74c3c;font-family:var(--mono);font-size:12px;padding:14px 20px;border-radius:8px;z-index:999;max-width:480px;line-height:1.6">
+    ⚠ Could not load trials.json<br><span style="color:var(--muted)">${msg}</span><br><br>
+    <span style="color:var(--muted)">Make sure trials.json is in the same folder as index.html.</span>
+  </div>`;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  showLoader();
+  try {
+    const res = await fetch('trials.json');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    TRIALS = data.trials;
+
+    // Update bracket stats dynamically from the data
+    const readme = data._readme;
+    if (readme && readme.stats) {
+      const s = readme.stats;
+      setBracket(s.total_arms, s.total_patients, s.arms_with_mrd, s.year_range);
+    }
+
+    renderTable('all');
+    buildChecklist();
+    window.addEventListener('resize',()=>{ if(curPage==='graphs') draw(); });
+
+  } catch(e) {
+    showError(e.message);
+  }
+});
+
+function setBracket(arms, patients, mrd, years) {
+  const el = id => document.getElementById(id);
+  if(el('bv-trials'))  el('bv-trials').textContent  = arms;
+  if(el('bs-trials'))  el('bs-trials').textContent  = arms + ' trial arms';
+  if(el('bv-pts'))     el('bv-pts').textContent     = Number(patients).toLocaleString();
+  if(el('bv-mrd'))     el('bv-mrd').textContent     = mrd;
+  if(el('bv-years'))   el('bv-years').textContent   = years.replace('-','–');
+}
+
+// ── NAV ───────────────────────────────────────────────────────────
+function showPage(p){
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-tabs a').forEach(a=>a.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  curPage=p;
+  if(p==='graphs'){document.getElementById(CFG[curOutcome].nav).classList.add('active');setTimeout(draw,40);}
+  else if(p==='pico') document.getElementById('nav-pico').classList.add('active');
+  else document.getElementById('nav-trials').classList.add('active');
+}
+
+// ── MATH ──────────────────────────────────────────────────────────
+function logOR(ni,nc,Ni,Nc){const a=ni+.5,b=Ni-ni+.5,c=nc+.5,d=Nc-nc+.5;return Math.log(a*d/(b*c));}
+function seHR(hr,lo,hi){return(!hr||!lo||!hi)?null:(Math.log(hi)-Math.log(lo))/(2*1.96);}
+function wls(pts){
+  if(pts.length<3)return null;
+  const sw=pts.reduce((s,p)=>s+p.w,0);
+  const xb=pts.reduce((s,p)=>s+p.w*p.x,0)/sw;
+  const yb=pts.reduce((s,p)=>s+p.w*p.y,0)/sw;
+  const Sxx=pts.reduce((s,p)=>s+p.w*(p.x-xb)**2,0);
+  const Sxy=pts.reduce((s,p)=>s+p.w*(p.x-xb)*(p.y-yb),0);
+  if(Math.abs(Sxx)<1e-12)return null;
+  const beta=Sxy/Sxx,alpha=yb-beta*xb;
+  const sse=pts.reduce((s,p)=>s+p.w*(p.y-alpha-beta*p.x)**2,0);
+  const df=pts.length-2,mse=sse/df,bse=Math.sqrt(mse/Sxx);
+  const t=beta/bse,pv=2*(1-tCDF(Math.abs(t),df));
+  const syy=pts.reduce((s,p)=>s+p.w*(p.y-yb)**2,0);
+  return{beta,alpha,bse,r2:Math.max(0,1-sse/syy),p:pv,sw,xb,Sxx,mse};
+}
+function tCDF(t,df){const x=df/(df+t*t);return 1-.5*incB(x,df/2,.5);}
+function incB(x,a,b){if(x<=0)return 0;if(x>=1)return 1;const lb=lg(a)+lg(b)-lg(a+b);return Math.exp(Math.log(x)*a+Math.log(1-x)*b-lb)/a*bCF(x,a,b);}
+function bCF(x,a,b){let c=1,d=1-(a+b)*x/(a+1);if(Math.abs(d)<1e-30)d=1e-30;d=1/d;let h=d;for(let m=1;m<=100;m++){let m2=2*m,aa=m*(b-m)*x/((a+m2-1)*(a+m2));d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;d=1/d;h*=d*c;aa=-(a+m)*(a+b+m)*x/((a+m2)*(a+m2+1));d=1+aa*d;if(Math.abs(d)<1e-30)d=1e-30;c=1+aa/c;if(Math.abs(c)<1e-30)c=1e-30;d=1/d;const dl=d*c;h*=dl;if(Math.abs(dl-1)<3e-7)break;}return h;}
+function lg(x){const c=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,1.20865097386618e-3,-5.395239384953e-6];let y=x,tmp=x+5.5;tmp-=(x+.5)*Math.log(tmp);let s=1.000000000190015;for(let i=0;i<6;i++)s+=c[i]/++y;return-tmp+Math.log(2.5066282746310005*s/x);}
+function fP(p){if(p===null||isNaN(p))return'—';if(p<.001)return'<0.001';return p.toFixed(3);}
+
+function getPts(o){
+  return TRIALS.map((t,i)=>{
+    const se=seHR(t.os.hr,t.os.ci_low,t.os.ci_high);
+    const w=se?1/(se*se):null,y=t.os.hr?Math.log(t.os.hr):null;
+    let x=null;
+    if(o==='mrd'&&t.mrd.n_i!=null&&t.n_intervention&&t.n_control) x=logOR(t.mrd.n_i,t.mrd.n_c,t.n_intervention,t.n_control);
+    else if(o==='cr'&&t.cr.n_i!=null&&t.n_intervention&&t.n_control) x=logOR(t.cr.n_i,t.cr.n_c,t.n_intervention,t.n_control);
+    else if(o==='efs'&&t.efs.hr) x=Math.log(t.efs.hr);
+    return{trial:t,x,y,w,hasData:x!==null&&y!==null&&w!==null,idx:i};
+  });
+}
+
+// ── TABLE ─────────────────────────────────────────────────────────
+function renderTable(f){
+  const rows=f==='mrd'?TRIALS.filter(t=>t.mrd.n_i!==null):f==='all'?TRIALS:TRIALS.filter(t=>t.class===f||t.drug_class===f);
+  document.getElementById('table-meta').textContent=`${rows.length} / ${TRIALS.length} trial arms displayed`;
+  const mc={'mfc':'mb-mfc','ngs':'mb-ngs','pcr_npm1':'mb-pcr','pcr_cbf':'mb-pcr','mfc/pcr':'mb-pcr','mixed':'mb-mix'};
+  document.getElementById('trials-tbody').innerHTML=rows.map(t=>{
+    const cb=t.class==='intensive'?'badge-int':t.class==='non-intensive'?'badge-noint':'badge-mixed';
+    const hrOS=t.os.hr?`<span class="hr-val">${t.os.hr.toFixed(2)}</span> <span class="hr-ci">(${t.os.ci_low?.toFixed(2)}–${t.os.ci_high?.toFixed(2)})</span>`:'—';
+    const hrEFS=t.efs.hr?`<span class="hr-val">${t.efs.hr.toFixed(2)}</span> <span class="hr-ci">(${t.efs.ci_low?.toFixed(2)}–${t.efs.ci_high?.toFixed(2)})</span>`:'<span style="color:#3d4451">NR</span>';
+    const cr=t.cr.n_i!=null?`<span class="td-mono">${t.cr.n_i}/${t.n_intervention??'?'}</span><br><span class="hr-ci">${t.cr.n_c}/${t.n_control??'?'}</span>`:'—';
+    const mrd=t.mrd.n_i!=null?`<span class="td-mono">${t.mrd.n_i}/${t.mrd.n_c}</span><span class="mrd-badge ${mc[t.mrd.method]||''}">${t.mrd.method||''}</span>`:'<span style="color:#3d4451;font-size:10px">NR</span>';
+    const pmid=t.pmid?`<a class="pmid-link" href="https://pubmed.ncbi.nlm.nih.gov/${t.pmid}" target="_blank">${t.pmid}</a>`:'—';
+    return`<tr>
+      <td class="td-muted">${t.trial_number}</td>
+      <td style="font-weight:500">${t.author1}</td>
+      <td class="td-accent">${t.trial_name||'—'}</td>
+      <td class="td-muted">${t.year}</td>
+      <td><span class="badge ${cb}">${t.class}</span></td>
+      <td class="td-muted">${t.drug_class||'—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${t.intervention_arm}</td>
+      <td style="font-size:11px;color:var(--muted)">${t.control_arm}</td>
+      <td class="td-muted" style="text-align:center">${t.n_intervention??'—'}</td>
+      <td class="td-muted" style="text-align:center">${t.n_control??'—'}</td>
+      <td>${hrOS}</td><td>${hrEFS}</td><td>${cr}</td><td>${mrd}</td><td>${pmid}</td>
+    </tr>`;
+  }).join('');
+}
+function filterTable(f,btn){document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderTable(f);}
+
+// ── CHECKLIST ─────────────────────────────────────────────────────
+function buildChecklist(){
+  const pts=getPts(curOutcome);
+  TRIALS.forEach((_,i)=>checked.add(i));
+  const cnt={mrd:0,cr:0,efs:0};
+  TRIALS.forEach((_,i)=>{
+    if(getPts('mrd')[i].hasData)cnt.mrd++;
+    if(getPts('cr')[i].hasData)cnt.cr++;
+    if(getPts('efs')[i].hasData)cnt.efs++;
+  });
+  document.getElementById('count-mrd').textContent=cnt.mrd;
+  document.getElementById('count-cr').textContent=cnt.cr;
+  document.getElementById('count-efs').textContent=cnt.efs;
+  document.getElementById('trial-checklist').innerHTML=pts.map((p,i)=>{
+    const t=p.trial;
+    const lbl=`${t.author1.split(',')[0]} ${t.year}${t.trial_name?' · '+t.trial_name:''}`;
+    return`<div class="trial-check-item ${p.hasData?'':'no-data'}" onclick="toggleTrial(${i},event)">
+      <input type="checkbox" id="chk${i}" ${p.hasData?'checked':'disabled'} onclick="event.stopPropagation()" onchange="toggleTrial(${i})">
+      <label class="trial-check-label" for="chk${i}">${lbl}</label>
+    </div>`;
+  }).join('');
+}
+function toggleTrial(i,ev){
+  const pts=getPts(curOutcome);if(!pts[i].hasData)return;
+  if(checked.has(i))checked.delete(i);else checked.add(i);
+  document.getElementById('chk'+i).checked=checked.has(i);draw();
+}
+function selAll(v){
+  getPts(curOutcome).forEach((p,i)=>{
+    if(!p.hasData)return;const el=document.getElementById('chk'+i);
+    if(!el||el.disabled)return;
+    if(v)checked.add(i);else checked.delete(i);el.checked=v;
+  });draw();
+}
+function applyPreset(preset,btn){
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('applied'));btn.classList.add('applied');
+  TRIALS.forEach((t,i)=>{
+    const inc=preset==='all'?true:preset==='intensive'?t.class==='intensive':preset==='non-intensive'?t.class==='non-intensive':t.drug_class===preset;
+    if(inc)checked.add(i);else checked.delete(i);
+    const el=document.getElementById('chk'+i);
+    if(el&&!el.disabled)el.checked=inc;
+    if(el&&el.disabled)el.checked=false;
+  });draw();
+}
+function setOutcome(o){
+  curOutcome=o;
+  document.querySelectorAll('.outcome-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+o).classList.add('active');
+  document.querySelectorAll('.nav-tabs a').forEach(a=>a.classList.remove('active'));
+  document.getElementById(CFG[o].nav).classList.add('active');
+  document.getElementById('graph-title').textContent=CFG[o].title;
+  document.getElementById('graph-sub').textContent=CFG[o].sub;
+  buildChecklist();draw();
+}
+
+// ── SCATTER ───────────────────────────────────────────────────────
+function draw(){
+  const svg=document.getElementById('scatter-svg');
+  const wrap=svg.parentElement;
+  const W=wrap.clientWidth||600,H=wrap.clientHeight||420;
+  const m={top:24,right:28,bottom:52,left:56};
+  const iW=W-m.left-m.right,iH=H-m.top-m.bottom;
+  const cfg=CFG[curOutcome];
+  const allPts=getPts(curOutcome);
+  const active=allPts.filter(p=>p.hasData&&checked.has(p.idx));
+
+  document.getElementById('val-n').textContent=active.length;
+  document.getElementById('val-ntot').textContent=allPts.filter(p=>p.hasData).length;
+
+  const reg=wls(active.map(p=>({x:p.x,y:p.y,w:p.w})));
+  if(reg&&active.length>=3){
+    document.getElementById('val-beta').textContent=reg.beta.toFixed(3);
+    document.getElementById('sub-beta').textContent=`95% CI: ${(reg.beta-1.96*reg.bse).toFixed(3)} to ${(reg.beta+1.96*reg.bse).toFixed(3)}`;
+    document.getElementById('val-r2').textContent=reg.r2.toFixed(3);
+    document.getElementById('val-p').textContent=fP(reg.p);
+    document.getElementById('sub-p').textContent=reg.p<.05?'Significant (p < 0.05)':'Not significant';
+    document.getElementById('card-p').className='stat-card '+(reg.p<.05?'sig':'ns');
+    document.getElementById('card-beta').className='stat-card '+(reg.p<.05?'sig':'');
+  } else {
+    ['val-beta','val-r2','val-p'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('sub-beta').textContent='Need ≥3 trials with data';
+    document.getElementById('sub-p').textContent='—';
+    document.getElementById('card-p').className='stat-card';
+    document.getElementById('card-beta').className='stat-card';
+  }
+
+  const xs=active.map(p=>p.x),ys=active.map(p=>p.y);
+  const xp=(d3.max(xs)-d3.min(xs)||1)*.2,yp=(d3.max(ys)-d3.min(ys)||1)*.2;
+  const xDom=active.length?[d3.min(xs)-xp,d3.max(xs)+xp]:[-2,2];
+  const yDom=active.length?[d3.min(ys)-yp,d3.max(ys)+yp]:[-1.5,.8];
+  const ws=active.map(p=>p.w).filter(w=>w>0);
+  const xSc=d3.scaleLinear().domain(xDom).range([0,iW]);
+  const ySc=d3.scaleLinear().domain(yDom).range([iH,0]);
+  const rSc=ws.length?d3.scaleSqrt().domain([d3.min(ws),d3.max(ws)]).range([4,20]):()=>7;
+
+  d3.select(svg).selectAll('*').remove();
+  d3.select(svg).attr('width',W).attr('height',H);
+  const g=d3.select(svg).append('g').attr('transform',`translate(${m.left},${m.top})`);
+
+  g.append('g').call(d3.axisLeft(ySc).tickSize(-iW).tickFormat(''))
+   .call(g=>g.selectAll('line').attr('stroke','#21262d').attr('stroke-dasharray','3,3')).call(g=>g.select('.domain').remove());
+  g.append('g').attr('transform',`translate(0,${iH})`).call(d3.axisBottom(xSc).tickSize(-iH).tickFormat(''))
+   .call(g=>g.selectAll('line').attr('stroke','#21262d').attr('stroke-dasharray','3,3')).call(g=>g.select('.domain').remove());
+
+  if(xDom[0]<0&&xDom[1]>0) g.append('line').attr('x1',xSc(0)).attr('x2',xSc(0)).attr('y1',0).attr('y2',iH).attr('stroke','#30363d').attr('stroke-width',1);
+  if(yDom[0]<0&&yDom[1]>0) g.append('line').attr('x1',0).attr('x2',iW).attr('y1',ySc(0)).attr('y2',ySc(0)).attr('stroke','#30363d').attr('stroke-width',1);
+
+  g.append('g').attr('transform',`translate(0,${iH})`).call(d3.axisBottom(xSc).ticks(6))
+   .call(g=>g.select('.domain').attr('stroke','#30363d'))
+   .call(g=>g.selectAll('text').attr('font-family','IBM Plex Mono,monospace').attr('font-size','10px').attr('fill','#8b949e'));
+  g.append('g').call(d3.axisLeft(ySc).ticks(6))
+   .call(g=>g.select('.domain').attr('stroke','#30363d'))
+   .call(g=>g.selectAll('text').attr('font-family','IBM Plex Mono,monospace').attr('font-size','10px').attr('fill','#8b949e'));
+
+  g.append('text').attr('x',iW/2).attr('y',iH+42).attr('text-anchor','middle').attr('font-family','IBM Plex Mono,monospace').attr('font-size','11px').attr('fill','#8b949e').text(cfg.xl);
+  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-44).attr('text-anchor','middle').attr('font-family','IBM Plex Mono,monospace').attr('font-size','11px').attr('fill','#8b949e').text(cfg.yl);
+
+  if(reg&&active.length>=3){
+    const step=(xDom[1]-xDom[0])/80;
+    const xv=d3.range(xDom[0],xDom[1]+step,step);
+    const band=xv.map(x=>{
+      const yh=reg.alpha+reg.beta*x;
+      const se=Math.sqrt(reg.mse*(1/reg.sw+Math.pow(x-reg.xb,2)/reg.Sxx));
+      return{x,y:yh,se};
+    });
+    g.append('path').datum(band)
+     .attr('d',d3.area().x(d=>xSc(d.x)).y0(d=>ySc(d.y-1.96*d.se)).y1(d=>ySc(d.y+1.96*d.se)))
+     .attr('fill',cfg.col).attr('opacity',.07);
+    g.append('path').datum(band)
+     .attr('d',d3.line().x(d=>xSc(d.x)).y(d=>ySc(d.y)))
+     .attr('fill','none').attr('stroke',cfg.col).attr('stroke-width',1.5).attr('stroke-dasharray','6,3').attr('opacity',.7);
+  }
+
+  const tt=document.getElementById('tooltip');
+  g.selectAll('circle').data(active).enter().append('circle')
+   .attr('cx',d=>xSc(d.x)).attr('cy',d=>ySc(d.y)).attr('r',d=>rSc(d.w))
+   .attr('fill',cfg.col).attr('fill-opacity',.12).attr('stroke',cfg.col).attr('stroke-width',1.5).attr('cursor','pointer')
+   .on('mouseover',function(event,d){
+     d3.select(this).attr('fill-opacity',.35).attr('stroke-width',2.5);
+     const t=d.trial;
+     tt.innerHTML=`<div class="tt-author">${t.author1} ${t.year}</div>
+       ${t.trial_name?`<div class="tt-row">${t.trial_name}</div>`:''}
+       <div class="tt-row">${t.intervention_arm}</div>
+       <div class="tt-row">x = <span>${d.x.toFixed(3)}</span> &nbsp; y = <span>${d.y.toFixed(3)}</span></div>
+       <div class="tt-row">weight = <span>${d.w.toFixed(1)}</span></div>
+       ${t.mrd.method?`<div class="tt-row">MRD: <span>${t.mrd.method}</span> 10<sup>${t.mrd.sensitivity}</sup></div>`:''}`;
+     tt.classList.add('visible');
+   })
+   .on('mousemove',function(event){tt.style.left=(event.clientX+14)+'px';tt.style.top=(event.clientY-34)+'px';})
+   .on('mouseout',function(){d3.select(this).attr('fill-opacity',.12).attr('stroke-width',1.5);tt.classList.remove('visible');});
+
+  g.selectAll('.lbl').data(active).enter().append('text').attr('class','lbl')
+   .attr('x',d=>xSc(d.x)+rSc(d.w)+3).attr('y',d=>ySc(d.y)+4)
+   .attr('font-family','IBM Plex Mono,monospace').attr('font-size','9px').attr('fill','#8b949e')
+   .text(d=>d.trial.author1.split(',')[0]);
+}
+
+function downloadHTML(){
+  const blob=new Blob([document.documentElement.outerHTML],{type:'text/html'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='mrd-aml-meta-analysis.html';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>
