@@ -2,12 +2,12 @@
   "_readme": {
     "description": "Living database of AML RCTs for MRD surrogacy analysis",
     "version": "1.0",
-    "total_rows": 39,
+    "total_rows": 40,
     "outcomes_available": {
-      "os": "39/39",
-      "efs": "27/39",
-      "cr": "39/39",
-      "mrd": "16/39"
+      "os": "40/40",
+      "efs": "28/40",
+      "cr": "40/40",
+      "mrd": "17/40"
     },
     "known_issues": [
       "Trial 30 (Rollig, C - mitoxantrone+IDAC): n_intervention and n_control nulled due to data entry shift in source file \u2014 correct manually.",
