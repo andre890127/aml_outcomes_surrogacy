@@ -1156,7 +1156,7 @@
       "drug_class": "anthracycline",
       "intervention_arm": "m-idac",
       "control_arm": "da",
-      "n_intervention": null,
+      "n_intervention": 241,
       "n_control": 244,
       "os": {
         "hr": null,
